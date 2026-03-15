@@ -1,4 +1,5 @@
-import Background from "../../assets/new26.png";
+// import Background from "../../assets/new26.png";
+import Background from "../../assets/extremessage_logo.gif"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -45,6 +46,11 @@ const Auth = () => {
     <div className="h-[100vh] w-[100vw] flex items-center justify-center">
       <div className="h-[80vh] bg-white border-2 border-white text-opacity-90 shadow-2xl w-[80vw] md:w-[90vw] lg:w-[70vw] xl:w-[60vw] rounded-3xl grid xl:grid-cols-2">
         <div className="flex flex-col gap-10 items-center justify-center">
+          <div className="flex items-center justify-center flex-col">
+            <div className="flex items-center justify-center flex-col">
+              <h1 className="text-5xl md:text-6xl font-bold">Extremessage</h1>
+            </div>
+          </div>
           <div className="flex items-center justify-center flex-col">
             <div className="flex items-center justify-center">
               <h1 className="text-5xl md:text-6xl font-bold">Welcome</h1>

@@ -3,3 +3,11 @@ import { createChannel, getUserChannels, leaveChannel } from "../controllers/cha
 import verifyToken from "../middleware/auth.js";
 
 const router = Router();
+
+router.use(verifyToken);
+
+router.post("/", createChannel);
+router.get("/", getUserChannels);
+router.delete("/:id/leave", leaveChannel);
+
+export default router;

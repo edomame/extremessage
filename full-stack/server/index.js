@@ -1,80 +1,90 @@
-import express, { Router } from "express";
+import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
-dotenv.config(); // Load environment variables from .env file
+import authRoutes from "./routes/auth.js";
+import channelRoutes from "./routes/channels.js";
+import messageRoutes from "./routes/messages.js";
+import userRoutes from "./routes/users.js";
+import Message from "./models/Message.js";
+import Channel from "./models/Channel.js";
 
-const app = express(); // Create an Express application
-const PORT = process.env.PORT || 8747; // Define the port number (from environment variables or default 8747)
-const DATABASE_URL = process.env.DATABASE_URL; // Load MongoDB connection string from environment variables
+dotenv.config();
 
-// Middleware to enable CORS (Cross-Origin Resource Sharing)
-app.use(
-  cors({
-    origin: process.env.ORIGIN, // Allow requests only from this frontend domain (defined in .env)
-    credentials: true, // Allow cookies and authentication headers in cross-origin requests
-  })
-);
+const app = express();
+const httpServer = createServer(app);
+const PORT = process.env.PORT || 8747;
 
-// Middleware to parse incoming JSON requests
+app.use(cors({
+  origin: process.env.ORIGIN,
+  credentials: true,
+}));
+
 app.use(express.json());
 
-// Define a user schema for MongoDB
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true }, // Email is required and must be unique
-  password: { type: String, required: true }, // Password is required
+app.use("/api/auth", authRoutes);
+app.use("/api/channels", channelRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/users", userRoutes);
+
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.ORIGIN,
+    credentials: true,
+  },
 });
 
-// Create a Mongoose model for the "users" collection
-const User = mongoose.model("User", userSchema);
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
 
-const signup = async (req, res) => {
-  try {
-    console.log("Received signup request:", req.body); // Log incoming request body
+  // User joins a channel room
+  socket.on("join-channel", (channelId) => {
+    socket.join(channelId);
+    console.log(`${socket.id} joined channel ${channelId}`);
+  });
 
-    // Extract email and password from request body
-    const { email, password } = req.body;
+  // User leaves a channel room
+  socket.on("leave-channel", (channelId) => {
+    socket.leave(channelId);
+    console.log(`${socket.id} left channel ${channelId}`);
+  });
 
-    // Validate that email and password are provided
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required" });
+  // User sends a message
+  socket.on("send-message", async ({ channelId, userId, content }) => {
+    try {
+      if (!content || content.trim() === "") return;
+
+      const channel = await Channel.findById(channelId);
+      if (!channel || !channel.members.includes(userId)) return;
+
+      const message = await Message.create({
+        content: content.trim(),
+        sender: userId,
+        channel: channelId,
+      });
+
+      await message.populate("sender", "username");
+
+      // Broadcast to everyone in the channel including sender
+      io.to(channelId).emit("receive-message", message);
+    } catch (error) {
+      console.error("Socket message error:", error);
     }
+  });
 
-    // Check if the user already exists in the database
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({ message: "Email already registered" });
-    }
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
 
-    // Create a new user document
-    const newUser = new User({ email, password });
-    const savedUser = await newUser.save(); // Save the user to MongoDB
-
-    console.log("User saved successfully:", savedUser);
-    res.status(201).json({ message: "User registered successfully" }); // Send success response
-  } catch (error) {
-    console.error("Signup error:", error);
-    res.status(500).json({ message: "Internal Server Error" }); // Send error response
-  }
-};
-
-// Define the router and endpoint
-const authRoutes = Router();
-app.use("/api/auth", authRoutes);
-
-// POST /api/auth/signup
-authRoutes.post("/signup", signup);
-
-// Connect to MongoDB using Mongoose
 mongoose
-  .connect(DATABASE_URL) // Connect to the database using the URL from environment variables
-  .then(() => console.log("MongoDB connected successfully")) // Log success message
-  .catch((err) => console.error("MongoDB connection error:", err)); // Log error if connection fails
+  .connect(process.env.DATABASE_URL)
+  .then(() => console.log("MongoDB connected successfully"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
-// Start the Express server and listen on the specified port
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);
 });

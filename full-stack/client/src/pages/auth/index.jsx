@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import axios from "axios";
 import { HOST, SIGNUP_ROUTE } from "@/lib/constants";
+import { useNavigate } from "react-router-dom";
 
 // Creates an axios instance with a server URL
 const apiClient = axios.create({
@@ -17,6 +18,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
   const handleSignup = async () => {
     try {
@@ -33,6 +35,7 @@ const Auth = () => {
       // If the server responds with status 201, update the message state to show success
       if (response.status === 201) {
         setMessage("Signup successful!");
+        navigate("/dashboard")
       }
     } catch (error) {
       const errorMessage =

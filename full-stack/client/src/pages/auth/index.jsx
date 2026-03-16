@@ -15,18 +15,27 @@ const apiClient = axios.create({
 const Auth = () => {
   // State variables for capturing user input and feedback messages
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   const handleSignup = async () => {
+
+    if (password !== confirmPassword)
+    {
+      setMessage("Passwords do not match");
+      return;
+    }
+
     try {
       // Sends the email and password to the signup route
       const response = await apiClient.post(
         SIGNUP_ROUTE,
         {
           email,
+          username,
           password,
         },
         { withCredentials: true }
@@ -67,6 +76,13 @@ const Auth = () => {
                 className="rounded-full p-6"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+              <Input
+                placeholder="Username"
+                type="username"
+                className="rounded-full p-6"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
               <Input
                 placeholder="Password"

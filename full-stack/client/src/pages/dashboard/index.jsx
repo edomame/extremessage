@@ -12,12 +12,6 @@ const apiClient = axios.create({
   baseURL: HOST,
 });
 
-// const socket = io(HOST, {
-//     auth: {
-//         token: localStorage.getItem("token")
-//     },
-// });
-
 apiClient.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -75,26 +69,37 @@ const Dashboard = () => {
         if (!selectedChannel || !socketRef.current) return;
 
         const socket = socketRef.current;
-        socket.emit("join_channel", selectedChannel._id);
 
-        const fetchMessages = async () => {
-            try {
-                const res = await apiClient.get(`/api/messages/${selectedChannel._id}`);
-                setChannelMessages(res.data);
-            } catch (error) {
-                console.error("Failed to fetch messages", error);
-                setChannelMessages([]);
-            }
+        const setup = () => {
+            socket.emit("join-channel", selectedChannel._id);
+
+            const fetchMessages = async () => {
+                try {
+                    const res = await apiClient.get(`/api/messages/${selectedChannel._id}`);
+                    setChannelMessages(res.data);
+                } catch (error) {
+                    console.error("Failed to fetch messages", error);
+                    setChannelMessages([]);
+                }
+            };
+            fetchMessages();
+
+            socket.off("receive-message");
+            socket.on("receive-message", (msg) => {
+                setChannelMessages((prev) => [...prev, msg]);
+            });
         };
-        fetchMessages();
 
-        socket.on("new_message", (msg) => {
-            setChannelMessages((prev) => [...prev, msg]);
-        });
+        if (socket.connected) {
+            setup();
+        } else {
+            socket.once("connect", setup);
+        }
 
         return () => {
-            socket.emit("leave_channel", selectedChannel._id);
-            socket.off("new_message");
+            socket.emit("leave-channel", selectedChannel._id);
+            socket.off("receive-message");
+            socket.off("connect", setup);
         };
     }, [selectedChannel]);
 
@@ -121,18 +126,14 @@ const Dashboard = () => {
         }
     };
 
-    const sendMessage = async (content) => {
+    const sendMessage = (content) => {
         if (!selectedChannel || !content.trim()) return;
-        try {
-            const res = await apiClient.post(`${MESSAGE_ROUTE}/${selectedChannel._id}`, {
-                content,
-                channelId: selectedChannel._id,
-            });
-            setChannelMessages((prev) => [...prev, res.data]);
-            socketRef.current.emit("send_message", res.data);
-        } catch (error) {
-            console.error("Failed to send message", error);
-        }
+
+        socketRef.current.emit("send-message", {
+            channelId: selectedChannel._id,
+            userId: localStorage.getItem("userId"),
+            content,
+        });
     };
 
     const leaveChannel = async (channel) => {

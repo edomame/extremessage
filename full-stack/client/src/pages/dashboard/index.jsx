@@ -1,5 +1,5 @@
 import axios from "axios";
-import { CHANNEL_ROUTE, HOST, USER_ROUTE } from "@/lib/constants";
+import { CHANNEL_ROUTE, HOST, USER_ROUTE, MESSAGE_ROUTE } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import { MessageInput } from "../../components/ui/message_input.jsx";
 import { ChannelList } from "../../components/ui/channel_list.jsx"
@@ -32,8 +32,13 @@ const Dashboard = () => {
         const fetchChannels = async () => {
             const res = await apiClient.get(CHANNEL_ROUTE);
             setChannels(res.data);
+
+            const savedId = localStorage.getItem("selectedChannelId");
+            if (savedId) {
+                const found = res.data.find(c => c._id === savedId);
+                if (found) setSelectedChannel(found);
+            }
         };
-        fetchChannels();
 
         const fetchUsers = async () => {
             try {
@@ -43,21 +48,29 @@ const Dashboard = () => {
                 console.error("Failed to fetch users", error);
             }
         };
-        fetchUsers();
 
-        // if (!selectedChannel) return;
+        fetchChannels();
+        fetchUsers();
+    }, []);
+
+    useEffect(() => {
+        if (!selectedChannel) return;
 
         const fetchMessages = async () => {
             try {
-                const res = await apiClient.get(`/api/messages?channelId=${selectedChannel._id}`);
+                const res = await apiClient.get(
+                    // `/api/messages?channelId=${selectedChannel._id}`
+                    `/api/messages/${selectedChannel._id}`
+                );
                 setChannelMessages(res.data);
             } catch (error) {
                 console.error("Failed to fetch messages", error);
+                setChannelMessages([]);
             }
         };
-        fetchMessages();
 
-    }, []);
+        fetchMessages();
+    }, [selectedChannel]);
 
     const createChannel = async () => {
         if (!newChannelName.trim()) return;
@@ -85,6 +98,25 @@ const Dashboard = () => {
             setMessage("Failed to create channel");
             console.error("Failed to create channel", error);
         };
+    };
+
+    const sendMessage = async (content) => {
+        if (!selectedChannel || !content.trim()) return;
+
+        try {
+            const userId = localStorage.getItem("userId");
+
+            const res = await apiClient.post(`${MESSAGE_ROUTE}/${selectedChannel._id}`, {
+                content,
+                channelId: selectedChannel._id,
+            });
+
+            // Update UI immediately (no refetch needed)
+            setChannelMessages((prev) => [...prev, res.data]);
+
+        } catch (error) {
+            console.error("Failed to send message", error);
+        }
     };
 
     return (
@@ -145,7 +177,8 @@ const Dashboard = () => {
                     )}
                 </div>
                 <div className="p-2 mt-auto flex flex-col gap-2 bg-green-400 rounded-t-lg">
-                    <MessageInput />
+                    {/* <MessageInput /> */}
+                    <MessageInput onSend={sendMessage} />
                 </div>
             </div>
 

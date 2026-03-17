@@ -28,30 +28,34 @@ const Dashboard = () => {
     const [selectedChannel, setSelectedChannel] = useState(null);
     const [channelMessages, setChannelMessages] = useState([]);
     
-    useEffect(() => {
-        const fetchChannels = async () => {
-            const res = await apiClient.get(CHANNEL_ROUTE);
-            setChannels(res.data);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [channelsRes, usersRes] = await Promise.all([
+          apiClient.get(CHANNEL_ROUTE),
+          apiClient.get(USER_ROUTE),
+        ]);
 
-            const savedId = localStorage.getItem("selectedChannelId");
-            if (savedId) {
-                const found = res.data.find(c => c._id === savedId);
-                if (found) setSelectedChannel(found);
-            }
-        };
+        setChannels(channelsRes.data);
+        setUsers(usersRes.data);
 
-        const fetchUsers = async () => {
-            try {
-                const response = await apiClient.get(USER_ROUTE);
-                setUsers(response.data);
-            } catch (error) {
-                console.error("Failed to fetch users", error);
-            }
-        };
+        // Restore selectedChannel from localStorage
+        const savedChannelId = localStorage.getItem("selectedChannelId");
+        if (savedChannelId) {
+          const channelFromList = channelsRes.data.find(c => c._id === savedChannelId);
+          if (channelFromList) {
+            // Fetch full channel details including members
+            const fullChannelRes = await apiClient.get(`${CHANNEL_ROUTE}/${savedChannelId}`);
+            setSelectedChannel(fullChannelRes.data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch channels or users:", error);
+      }
+    };
 
-        fetchChannels();
-        fetchUsers();
-    }, []);
+    fetchData();
+  }, []);
 
     useEffect(() => {
         if (!selectedChannel) return;

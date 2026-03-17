@@ -35,6 +35,7 @@ const Auth = () => {
         SIGNUP_ROUTE,
         {
           email,
+          username,
           password,
         },
         { withCredentials: true }

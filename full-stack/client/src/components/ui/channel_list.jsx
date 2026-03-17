@@ -2,23 +2,24 @@ import { useEffect, useState } from "react";
 import { CHANNEL_ROUTE } from "@/lib/constants";
 
 // const ChannelList = ({ onSelectChannel }) => {
-const ChannelList = ({ apiClient, onSelectChannel }) => {
-  const [channels, setChannels] = useState([]);
+const ChannelList = ({ apiClient, channels = [], onSelectChannel }) => {
+//   const [channels, setChannels] = useState([]);
 
-  useEffect(() => {
-    const fetchChannels = async () => {
-      try {
-        const response = await apiClient.get(
-            CHANNEL_ROUTE, 
-            // { withCredentials: true }
-        );
-        setChannels(response.data);
-      } catch (error) {
-        console.error("Failed to fetch channels", error);
-      }
-    };
-    fetchChannels();
-    }, [apiClient]);
+//   useEffect is instead called in dashboard so that it can refresh when a new channel is added
+//   useEffect(() => {
+//     const fetchChannels = async () => {
+//       try {
+//         const response = await apiClient.get(
+//             CHANNEL_ROUTE, 
+//             // { withCredentials: true }
+//         );
+//         setChannels(response.data);
+//       } catch (error) {
+//         console.error("Failed to fetch channels", error);
+//       }
+//     };
+//     fetchChannels();
+//     }, [apiClient]);
 
     // Testing the buttons without backend connection fully complete
     // const dummyChannels = Array.from({ length: 100 }, (_, i) => ({

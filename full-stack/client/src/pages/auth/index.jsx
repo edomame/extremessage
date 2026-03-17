@@ -45,6 +45,7 @@ const Auth = () => {
       if (response.status === 201) {
         setMessage("Signup successful!");
         localStorage.setItem("token", response.data.token);
+        // localStorage.setItem("userId", userId);
         navigate("/dashboard")
       }
     } catch (error) {

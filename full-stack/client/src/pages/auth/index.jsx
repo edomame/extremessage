@@ -46,6 +46,8 @@ const Auth = () => {
         setMessage("Signup successful!");
         localStorage.setItem("token", response.data.token);
         // localStorage.setItem("userId", userId);
+        localStorage.setItem("userId", response.data.userId);
+        localStorage.setItem("username", response.data.username);       
         navigate("/dashboard")
       }
     } catch (error) {

@@ -3,6 +3,7 @@ import { CHANNEL_ROUTE, HOST, USER_ROUTE, MESSAGE_ROUTE } from "@/lib/constants"
 import { useState, useEffect, useRef } from "react";
 import { MessageInput } from "../../components/ui/message_input.jsx";
 import { ChannelList } from "../../components/ui/channel_list.jsx"
+import { ChannelForm } from "../../components/ui/channel_form.jsx";
 import { UserList } from "../../components/ui/user_list.jsx";
 import { io } from "socket.io-client";
 
@@ -29,7 +30,6 @@ const Dashboard = () => {
     const [newChannelName, setNewChannelName] = useState("");
     const [channels, setChannels] = useState([]);
     const [message, setMessage] = useState("");
-    const [newChannelMembers, setNewChannelMembers] = useState("");
     const [users, setUsers] = useState([]);
 
     const [selectedChannel, setSelectedChannel] = useState(null);
@@ -98,23 +98,22 @@ const Dashboard = () => {
         };
     }, [selectedChannel]);
 
-    const createChannel = async () => {
-        if (!newChannelName.trim()) return;
+    const createChannel = async (channelName, membersString) => {
+        if (!channelName.trim()) return;
         try {
             const userId = localStorage.getItem("userId");
-            const membersList = newChannelMembers
+            const membersList = membersString
                 .split(",")
                 .map((username) => username.trim())
                 .map(username => users.find(u => u.username === username)?._id)
                 .filter(Boolean);
             if (userId) membersList.push(userId);
             const response = await apiClient.post(CHANNEL_ROUTE, {
-                name: newChannelName,
+                name: channelName,
                 members: membersList,
             });
             setChannels((prev) => [...prev, response.data]);
             setNewChannelName("");
-            setNewChannelMembers("");
             setMessage("Channel created");
         } catch (error) {
             setMessage("Failed to create channel");
@@ -165,7 +164,6 @@ const Dashboard = () => {
                     </div>
                 </div>
                 <div className="flex-1 overflow-auto p-2">
-                    {/* <ChannelList apiClient={apiClient} channels={channels} onSelectChannel={(channel) => setSelectedChannel(channel)}/> */}
                     <ChannelList
                         apiClient={apiClient}
                         channels={channels}
@@ -175,29 +173,13 @@ const Dashboard = () => {
                 </div>
 
                 <div className="p-2 mt-auto flex flex-col gap-2 bg-red-300 rounded-t-lg">
-                    <input
-                        type="text"
-                        placeholder="New channel name"
-                        value={newChannelName}
-                        onChange={(e) => setNewChannelName(e.target.value)}
-                        className="rounded-full p-2"
+                    <ChannelForm
+                        users={users}
+                        onCreateChannel={createChannel}
+                        newChannelName={newChannelName}
+                        setNewChannelName={setNewChannelName}
+                        message={message}
                     />
-                    <input
-                        type="text"
-                        placeholder="Members"
-                        value={newChannelMembers}
-                        onChange={(e) => setNewChannelMembers(e.target.value)}
-                        className="rounded-full p-2"
-                    />
-                    <button
-                        onClick={createChannel}
-                        className="rounded-full p-2 bg-red-500 hover:bg-red-600 text-white"
-                    >
-                        Create Channel
-                    </button>
-                    {message && (
-                        <p className="text-center mt-4 font-semibold">{message}</p>
-                    )}
                 </div>
 
             </div>
@@ -216,7 +198,6 @@ const Dashboard = () => {
                     )}
                 </div>
                 <div className="p-2 mt-auto flex flex-col gap-2 bg-green-400 rounded-t-lg">
-                    {/* <MessageInput /> */}
                     <MessageInput onSend={sendMessage} />
                 </div>
             </div>

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import axios from "axios";
-import { HOST, SIGNUP_ROUTE } from "@/lib/constants";
+import { HOST, SIGNUP_ROUTE, LOGIN_ROUTE } from "@/lib/constants";
 import { useNavigate } from "react-router-dom";
 
 // Creates an axios instance with a server URL
@@ -35,7 +35,6 @@ const Auth = () => {
         SIGNUP_ROUTE,
         {
           email,
-          username,
           password,
         },
         { withCredentials: true }
@@ -51,6 +50,33 @@ const Auth = () => {
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Signup failed. Please try again.";
+      setMessage(errorMessage);
+      console.log(error);
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      // Sends the email and password to the login route
+      const response = await apiClient.post(
+        LOGIN_ROUTE,
+        {
+          email,
+          password,
+        },
+        { withCredentials: true }
+      );
+
+      // If the server responds with status 200, update the message state to show success
+      if (response.status === 200) {
+        setMessage("Login successful!");
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("userId", response.data.userId);
+        navigate("/dashboard")
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Login failed. Please try again.";
       setMessage(errorMessage);
       console.log(error);
     }
@@ -102,6 +128,9 @@ const Auth = () => {
               />
               <Button className="rounded-full p-6" onClick={handleSignup}>
                 Signup
+              </Button>
+              <Button className="rounded-full p-6" onClick={handleLogin}>
+                Login
               </Button>
               {message && (
                 <p className="text-center mt-4 font-semibold">{message}</p>

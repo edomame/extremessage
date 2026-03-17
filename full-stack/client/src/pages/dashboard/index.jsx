@@ -1,29 +1,36 @@
+import axios from "axios";
+import { HOST } from "@/lib/constants";
+import { MessageInput } from "../../components/ui/message_input.jsx";
+import { ChannelList } from "../../components/ui/channel_list.jsx"
+
+// Creates an axios instance with a server URL
+const apiClient = axios.create({
+  baseURL: HOST,
+});
+
+apiClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 const Dashboard = () => {
   return (
-    // <div className="h-screen flex">
-    // <div className="h-screen grid grid-cols-[1fr_2fr_1fr]">
-    //     <div className="bg-red-200 border-r">
-    //         <h1>Dashboard</h1>
-    //         <p>You are logged in.</p>
-    //         Left panel
-    //     </div>
-
-    //     <div className="bg-green-200 border-r">
-    //         Center section
-    //     </div>
-
-    //     <div className="bg-blue-200">
-    //         Right panel
-    //     </div>
-    // </div>
     <div className="h-screen flex">
-        <div className="w-1/4 flex flex-col bg-red-200 border-r">
-            <div className="p-2 bg-red-400">
-                <b>Extremessage Dashboard</b>
-                <p>You are logged in.</p>
+        <div className="w-1/4 flex flex-col bg-red-200">
+            <div className="flex p-2 bg-red-500 rounded-md">
+                <div className="h-full w-1/4 flex bg-red-600">
+                    <img class="object-scale-down" src="../../../public/extremessage_logo.jpg" />
+                </div>
+                <div className="h-full w-3/4 flex-wrap justify-center items-center bg-red-400 p-2">
+                    <p class="text-center font-bold text-lg">Extremessage Dashboard</p>
+                    <p class="text-center">You are logged in.</p>
+                </div>
             </div>
-            <div className="p-2 flex-1 overflow-auto">
-                Left panel
+            <div className="flex-1 overflow-auto p-2">
+                <ChannelList apiClient={apiClient} />
             </div>
         </div>
 
@@ -31,8 +38,13 @@ const Dashboard = () => {
             Center section
         </div>
 
-        <div className="w-1/4 bg-blue-200">
-            Right panel
+        <div className="w-1/4 flex flex-col bg-blue-200">
+            <div className="flex-1 overflow-auto p-2">
+                <b>Users</b>
+                {Array.from({ length: 1000 }, (_, i) => (
+                    <p key={i}>User {i + 1}</p>
+                ))}
+            </div>
         </div>
     </div>
   );

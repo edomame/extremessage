@@ -44,6 +44,7 @@ const Auth = () => {
       // If the server responds with status 201, update the message state to show success
       if (response.status === 201) {
         setMessage("Signup successful!");
+        localStorage.setItem("token", response.data.token);
         navigate("/dashboard")
       }
     } catch (error) {

@@ -107,7 +107,7 @@ const Dashboard = () => {
                 .map((username) => username.trim())
                 .map(username => users.find(u => u.username === username)?._id)
                 .filter(Boolean);
-            membersList.push(userId);
+            if (userId) membersList.push(userId);
             const response = await apiClient.post(CHANNEL_ROUTE, {
                 name: newChannelName,
                 members: membersList,

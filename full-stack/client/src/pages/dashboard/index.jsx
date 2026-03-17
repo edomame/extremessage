@@ -25,6 +25,7 @@ const Dashboard = () => {
     const [channels, setChannels] = useState([]);
     const [message, setMessage] = useState("");
     const [users, setUsers] = useState([]);
+    const [currentUser, setCurrentUser] = useState("");
 
     const [selectedChannel, setSelectedChannel] = useState(null);
     const [channelMessages, setChannelMessages] = useState([]);
@@ -38,6 +39,10 @@ const Dashboard = () => {
         return () => {
             socketRef.current.disconnect();
         };
+    }, []);
+
+    useEffect(() => {
+        setCurrentUser(localStorage.getItem("username") || "");
     }, []);
 
     useEffect(() => {
@@ -160,8 +165,8 @@ const Dashboard = () => {
                         <img class="object-scale-down" src="../../../public/extremessage_logo.jpg" />
                     </div>
                     <div className="h-full w-3/4 flex-wrap justify-center items-center bg-red-400 p-2">
-                        <p class="text-center font-bold text-lg">Extremessage Dashboard</p>
-                        <p class="text-center">You are logged in.</p>
+                        <p className="text-center font-bold text-lg">Extremessage Dashboard</p>
+                        <p className="text-center">You are logged in as <strong>{currentUser}</strong></p>
                     </div>
                 </div>
                 <div className="flex-1 overflow-auto p-2">

@@ -107,7 +107,7 @@ const Auth = () => {
                 onChange={(e) => setEmail(e.target.value)}
               />
               <Input
-                placeholder="Username"
+                placeholder="Username (Not needed to login)"
                 type="username"
                 className="rounded-full p-6"
                 value={username}
@@ -121,7 +121,7 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
               <Input
-                placeholder="Confirm Password"
+                placeholder="Confirm Password (Not needed to login)"
                 type="password"
                 className="rounded-full p-6"
                 value={confirmPassword}

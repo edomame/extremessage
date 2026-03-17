@@ -3,6 +3,7 @@ import { CHANNEL_ROUTE, HOST, USER_ROUTE } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import { MessageInput } from "../../components/ui/message_input.jsx";
 import { ChannelList } from "../../components/ui/channel_list.jsx"
+import { UserList } from "../../components/ui/user_list.jsx";
 
 // Creates an axios instance with a server URL
 const apiClient = axios.create({
@@ -23,6 +24,9 @@ const Dashboard = () => {
     const [message, setMessage] = useState("");
     const [newChannelMembers, setNewChannelMembers] = useState("");
     const [users, setUsers] = useState([]);
+
+    const [selectedChannel, setSelectedChannel] = useState(null);
+    const [channelMessages, setChannelMessages] = useState([]);
     
     useEffect(() => {
         const fetchChannels = async () => {
@@ -40,13 +44,26 @@ const Dashboard = () => {
             }
         };
         fetchUsers();
+
+        // if (!selectedChannel) return;
+
+        const fetchMessages = async () => {
+            try {
+                const res = await apiClient.get(`/api/messages?channelId=${selectedChannel._id}`);
+                setChannelMessages(res.data);
+            } catch (error) {
+                console.error("Failed to fetch messages", error);
+            }
+        };
+        fetchMessages();
+
     }, []);
 
     const createChannel = async () => {
         if (!newChannelName.trim()) return;
 
         try {
-            const userId = localStorage.getItem("userId");      // Need to figure this out
+            const userId = localStorage.getItem("userId");
             const membersList = newChannelMembers
                 .split(",")
                 .map((username) => username.trim())
@@ -83,8 +100,7 @@ const Dashboard = () => {
                     </div>
                 </div>
                 <div className="flex-1 overflow-auto p-2">
-                    {/* <ChannelList apiClient={apiClient} /> */}
-                    <ChannelList apiClient={apiClient} channels={channels} />
+                    <ChannelList apiClient={apiClient} channels={channels} onSelectChannel={(channel) => setSelectedChannel(channel)}/>
                 </div>
 
                 <div className="p-2 mt-auto flex flex-col gap-2 bg-red-300 rounded-t-lg">
@@ -117,12 +133,18 @@ const Dashboard = () => {
 
             <div className="w-1/2 flex flex-col bg-green-200 border-r">
                 <div className="flex-2 overflow-auto p-2">
-                    <b>Messages</b>
-                    {Array.from({ length: 10000 }, (_, i) => (
-                        <p key={i}>Message {i + 1}</p>
-                    ))}
+                    <b>{selectedChannel ? `#${selectedChannel.name}` : "Messages"}</b>
+                    {selectedChannel ? (
+                        channelMessages.map((msg) => (
+                        <p key={msg._id}>
+                        <strong>{msg.sender.username}:</strong> {msg.content}
+                        </p>
+                        ))
+                    ) : (
+                        <p className="italic text-gray-500">Select a channel to view messages</p>
+                    )}
                 </div>
-                <div>
+                <div className="p-2 mt-auto flex flex-col gap-2 bg-green-400 rounded-t-lg">
                     <MessageInput />
                 </div>
             </div>
@@ -130,9 +152,11 @@ const Dashboard = () => {
             <div className="w-1/4 flex flex-col bg-blue-200">
                 <div className="flex-1 overflow-auto p-2">
                     <b>Users</b>
-                    {Array.from({ length: 1000 }, (_, i) => (
-                        <p key={i}>User {i + 1}</p>
-                    ))}
+                    {selectedChannel ? (
+                        <UserList apiClient={apiClient} users={users} selectedChannel={selectedChannel} />
+                    ) : (
+                        <p className="italic text-gray-500">Select a channel to see members</p>
+                    )}
                 </div>
             </div>
         </div>

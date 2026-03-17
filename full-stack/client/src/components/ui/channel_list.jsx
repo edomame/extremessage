@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CHANNEL_ROUTE } from "@/lib/constants";
 
 // const ChannelList = ({ onSelectChannel }) => {
-const ChannelList = ({ apiClient, channels = [], onSelectChannel }) => {
+const ChannelList = ({ apiClient, channels = [], onSelectChannel, onLeaveChannel }) => {
 //   const [channels, setChannels] = useState([]);
 
 //   useEffect is instead called in dashboard so that it can refresh when a new channel is added
@@ -37,14 +37,21 @@ const ChannelList = ({ apiClient, channels = [], onSelectChannel }) => {
         </p>
         ) : (
         channels.map((channel) => (
-            <button
-            key={channel._id}
-            className="text-left bg-red-300 hover:bg-red-400 rounded p-2"
-            onClick={() => onSelectChannel?.(channel)}
-            >
-            #{channel.name}
-            </button>
-        ))
+                <div key={channel._id} className="flex items-center justify-between">
+                    <button
+                        onClick={() => onSelectChannel(channel)}
+                        className="flex-1 text-left p-2 rounded-lg hover:bg-red-300"
+                    >
+                        # {channel.name}
+                    </button>
+                    <button
+                        onClick={() => onLeaveChannel(channel)}
+                        className="text-sm text-red-600 hover:text-red-800 px-2"
+                    >
+                        Leave
+                    </button>
+                </div>
+            ))
         )}
     </div>
     );

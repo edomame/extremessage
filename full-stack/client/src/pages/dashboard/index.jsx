@@ -1,14 +1,21 @@
 import axios from "axios";
 import { CHANNEL_ROUTE, HOST, USER_ROUTE, MESSAGE_ROUTE } from "@/lib/constants";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MessageInput } from "../../components/ui/message_input.jsx";
 import { ChannelList } from "../../components/ui/channel_list.jsx"
 import { UserList } from "../../components/ui/user_list.jsx";
+import { io } from "socket.io-client";
 
 // Creates an axios instance with a server URL
 const apiClient = axios.create({
   baseURL: HOST,
 });
+
+// const socket = io(HOST, {
+//     auth: {
+//         token: localStorage.getItem("token")
+//     },
+// });
 
 apiClient.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
@@ -27,58 +34,72 @@ const Dashboard = () => {
 
     const [selectedChannel, setSelectedChannel] = useState(null);
     const [channelMessages, setChannelMessages] = useState([]);
-    
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [channelsRes, usersRes] = await Promise.all([
-          apiClient.get(CHANNEL_ROUTE),
-          apiClient.get(USER_ROUTE),
-        ]);
-
-        setChannels(channelsRes.data);
-        setUsers(usersRes.data);
-
-        // Restore selectedChannel from localStorage
-        const savedChannelId = localStorage.getItem("selectedChannelId");
-        if (savedChannelId) {
-          const channelFromList = channelsRes.data.find(c => c._id === savedChannelId);
-          if (channelFromList) {
-            // Fetch full channel details including members
-            const fullChannelRes = await apiClient.get(`${CHANNEL_ROUTE}/${savedChannelId}`);
-            setSelectedChannel(fullChannelRes.data);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch channels or users:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
+    const socketRef = useRef(null);
 
     useEffect(() => {
-        if (!selectedChannel) return;
+        socketRef.current = io(HOST, {
+            auth: { token: localStorage.getItem("token") },
+        });
+
+        return () => {
+            socketRef.current.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [channelsRes, usersRes] = await Promise.all([
+                    apiClient.get(CHANNEL_ROUTE),
+                    apiClient.get(USER_ROUTE),
+                ]);
+                setChannels(channelsRes.data);
+                setUsers(usersRes.data);
+
+                const savedChannelId = localStorage.getItem("selectedChannelId");
+                if (savedChannelId) {
+                    const channelFromList = channelsRes.data.find(c => c._id === savedChannelId);
+                    if (channelFromList) {
+                        const fullChannelRes = await apiClient.get(`${CHANNEL_ROUTE}/${savedChannelId}`);
+                        setSelectedChannel(fullChannelRes.data);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch channels or users:", error);
+            }
+        };
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        if (!selectedChannel || !socketRef.current) return;
+
+        const socket = socketRef.current;
+        socket.emit("join_channel", selectedChannel._id);
 
         const fetchMessages = async () => {
             try {
-                const res = await apiClient.get(
-                    // `/api/messages?channelId=${selectedChannel._id}`
-                    `/api/messages/${selectedChannel._id}`
-                );
+                const res = await apiClient.get(`/api/messages/${selectedChannel._id}`);
                 setChannelMessages(res.data);
             } catch (error) {
                 console.error("Failed to fetch messages", error);
                 setChannelMessages([]);
             }
         };
-
         fetchMessages();
+
+        socket.on("new_message", (msg) => {
+            setChannelMessages((prev) => [...prev, msg]);
+        });
+
+        return () => {
+            socket.emit("leave_channel", selectedChannel._id);
+            socket.off("new_message");
+        };
     }, [selectedChannel]);
 
     const createChannel = async () => {
         if (!newChannelName.trim()) return;
-
         try {
             const userId = localStorage.getItem("userId");
             const membersList = newChannelMembers
@@ -87,39 +108,47 @@ const Dashboard = () => {
                 .map(username => users.find(u => u.username === username)?._id)
                 .filter(Boolean);
             membersList.push(userId);
-            const response = await apiClient.post(
-                CHANNEL_ROUTE,
-                {
-                    name: newChannelName,
-                    members: membersList,
-                });
+            const response = await apiClient.post(CHANNEL_ROUTE, {
+                name: newChannelName,
+                members: membersList,
+            });
             setChannels((prev) => [...prev, response.data]);
             setNewChannelName("");
             setNewChannelMembers("");
             setMessage("Channel created");
-            console.log("Channel created:", response.data);
         } catch (error) {
             setMessage("Failed to create channel");
             console.error("Failed to create channel", error);
-        };
+        }
     };
 
     const sendMessage = async (content) => {
         if (!selectedChannel || !content.trim()) return;
-
         try {
-            const userId = localStorage.getItem("userId");
-
             const res = await apiClient.post(`${MESSAGE_ROUTE}/${selectedChannel._id}`, {
                 content,
                 channelId: selectedChannel._id,
             });
-
-            // Update UI immediately (no refetch needed)
             setChannelMessages((prev) => [...prev, res.data]);
-
+            socketRef.current.emit("send_message", res.data);
         } catch (error) {
             console.error("Failed to send message", error);
+        }
+    };
+
+    const leaveChannel = async (channel) => {
+        try {
+            await apiClient.delete(`${CHANNEL_ROUTE}/${channel._id}/leave`);
+
+            setChannels((prev) => prev.filter((c) => c._id !== channel._id));
+
+            if (selectedChannel?._id === channel._id) {
+                setSelectedChannel(null);
+                setChannelMessages([]);
+                localStorage.removeItem("selectedChannelId");
+            }
+        } catch (error) {
+            console.error("Failed to leave channel", error);
         }
     };
 
@@ -136,7 +165,13 @@ const Dashboard = () => {
                     </div>
                 </div>
                 <div className="flex-1 overflow-auto p-2">
-                    <ChannelList apiClient={apiClient} channels={channels} onSelectChannel={(channel) => setSelectedChannel(channel)}/>
+                    {/* <ChannelList apiClient={apiClient} channels={channels} onSelectChannel={(channel) => setSelectedChannel(channel)}/> */}
+                    <ChannelList
+                        apiClient={apiClient}
+                        channels={channels}
+                        onSelectChannel={(channel) => setSelectedChannel(channel)}
+                        onLeaveChannel={leaveChannel} 
+                    />
                 </div>
 
                 <div className="p-2 mt-auto flex flex-col gap-2 bg-red-300 rounded-t-lg">

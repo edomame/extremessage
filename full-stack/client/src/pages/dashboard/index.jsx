@@ -34,8 +34,16 @@ const Dashboard = () => {
             </div>
         </div>
 
-        <div className="w-1/2 bg-green-200 border-r">
-            Center section
+        <div className="w-1/2 flex flex-col bg-green-200 border-r">
+            <div className="flex-2 overflow-auto p-2">
+                <b>Messages</b>
+                {Array.from({ length: 10000 }, (_, i) => (
+                    <p key={i}>Message {i + 1}</p>
+                ))}
+            </div>
+            <div>
+                <MessageInput />
+            </div>
         </div>
 
         <div className="w-1/4 flex flex-col bg-blue-200">
